@@ -43,3 +43,34 @@ ejecuta la auditoría **de lunes a viernes a las 9:00 AM (Europe/Madrid)**.
 ```bash
 gh workflow run auditoria.yml   # lanzada manual desde CLI
 ```
+
+## Notificaciones en Telegram
+
+El workflow envía a Telegram el resumen de la auditoría (`resumen.txt`), el
+`informe_auditoria_web.pdf` y la `screenshot_desktop.png`.
+
+**1. Crea el bot** — en Telegram, habla con [@BotFather](https://t.me/BotFather),
+ejecuta `/newbot`, elige nombre y guarda el **token** que te da
+(alfanumérico con dos `:`).
+
+**2. Obtén tu chat_id** — envía un mensaje cualquiera a tu bot (p. ej. `hola`)
+y abre en el navegador:
+
+```
+https://api.telegram.org/bot<TU_TOKEN>/getUpdates
+```
+
+Busca `"chat":{"id": 123456789 ...` → ese número es tu `TELEGRAM_CHAT_ID`.
+
+**3. Guarda los Secrets** — en el repo: **Settings → Secrets and variables →
+Actions → New repository secret** y añade:
+
+| Name | Value |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | el token de BotFather |
+| `TELEGRAM_CHAT_ID` | tu id de chat |
+
+Mientras no existan, el paso *"Enviar resultado a Telegram"* se omite y la
+ejecución sigue siendo válida (el informe se descarga como artifact).
+
+**4. Prueba** — *Actions → Auditoría web → Run workflow*.

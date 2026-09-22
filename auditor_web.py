@@ -108,13 +108,22 @@ async def auditar_web():
                 if msg.type == "error" and "Content Security Policy" not in msg.text and "requestStorageAccess" not in msg.text else None)
 
         print("ESTADO: Cargando la pagina principal...")
+        status_code = "N/A"
         try:
             res_main = await page.goto(URL_TARGET, wait_until="networkidle", timeout=30000)
             status_code = res_main.status if res_main else "N/A"
         except Exception as e:
-            print(f"ERROR: No se pudo cargar la pagina principal. Detalle: {e}")
-            await browser.close()
-            return
+            # 'networkidle' es estricto: si el sitio mantiene conexiones abiertas (analytics,
+            # websockets) agotamos el tiempo. Reintentamos con un criterio mas laxo.
+            print(f"AVISO: Espera de red inactiva agotada ({type(e).__name__}). Reintentando con 'load'...")
+            try:
+                res_main = await page.goto(URL_TARGET, wait_until="load", timeout=60000)
+                status_code = res_main.status if res_main else "N/A"
+            except Exception as e2:
+                print(f"ERROR: No se pudo cargar la pagina principal. Detalle: {e2}")
+                await browser.close()
+                generar_resumen("Timeout / No responde", [], [], [str(e2)])
+                return
 
         await preparar_pagina_y_multimedia(page)
 
@@ -142,6 +151,7 @@ async def auditar_web():
 
     print("DOCUMENTO: Compilando informe ejecutivo en formato PDF...")
     generar_pdf(status_code, enlaces_probados, enlaces_rotos, errores_consola)
+    generar_resumen(status_code, enlaces_probados, enlaces_rotos, errores_consola)
 
 def generar_pdf(status_code, probados, rotos, errores):
     fecha_hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -217,6 +227,39 @@ def generar_pdf(status_code, probados, rotos, errores):
 
     doc.build(story)
     print("FIN: El informe ha sido generado correctamente: informe_auditoria_web.pdf")
+
+def generar_resumen(status_code, probados, rotos, errores):
+    """Resumen en texto plano, pensado para publicarlo en Telegram."""
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    errores_unicos = list(dict.fromkeys(errores))
+
+    lineas = [
+        "AUDITORIA WEB - " + URL_TARGET,
+        "Fecha: " + fecha_hoy,
+        "",
+        f"HTTP de carga inicial: {status_code}",
+        f"Enlaces verificados: {len(probados)}",
+        f"Enlaces no operativos: {len(rotos)}",
+        f"Errores de consola (JS): {len(errores_unicos)}",
+    ]
+
+    if rotos:
+        lineas += ["", "Enlaces no operativos:"]
+        lineas += [f"- [{r['status']}] {r['url']}" for r in rotos[:15]]
+    else:
+        lineas += ["", "Sin enlaces rotos detectados."]
+
+    if errores_unicos:
+        lineas += ["", "Errores de consola:"]
+        lineas += [f"- {e}" for e in errores_unicos[:5]]
+
+    if not probados and not rotos:
+        lineas += ["", "AVISO: la auditoria no ha podido completarse."]
+
+    with open("resumen.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(lineas) + "\n")
+
+    print("RESUMEN: Archivo resumen.txt generado para Telegram.")
 
 if __name__ == "__main__":
     asyncio.run(auditar_web())

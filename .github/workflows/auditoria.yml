@@ -16,6 +16,9 @@ jobs:
     name: Auditar rehametrics.com
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - name: Checkout
@@ -35,6 +38,38 @@ jobs:
 
       - name: Ejecutar auditoría
         run: python auditor_web.py
+
+      # Se omite mientras no existan los secrets TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+      - name: Enviar resultado a Telegram
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        run: |
+          set -euo pipefail
+          API="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}"
+
+          if [ -f resumen.txt ]; then
+            curl -fsS -X POST "${API}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text@resumen.txt" > /dev/null
+          else
+            curl -fsS -X POST "${API}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text=AUDITORIA WEB - ${GITHUB_REPOSITORY}
+          La auditoria finalizo sin generar resumen. Revisa la ejecucion: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" > /dev/null
+          fi
+
+          if [ -f informe_auditoria_web.pdf ]; then
+            curl -fsS -X POST "${API}/sendDocument" \
+              -F "chat_id=${TELEGRAM_CHAT_ID}" \
+              -F "document=@informe_auditoria_web.pdf" \
+              -F "caption=Informe PDF de la auditoria" > /dev/null
+          fi
+
+          if [ -f screenshot_desktop.png ]; then
+            curl -fsS -X POST "${API}/sendDocument" \
+              -F "chat_id=${TELEGRAM_CHAT_ID}" \
+              -F "document=@screenshot_desktop.png" \
+              -F "caption=Captura de pantalla (escritorio)" > /dev/null
+          fi
 
       - name: Subir informe y captura
         if: always()
