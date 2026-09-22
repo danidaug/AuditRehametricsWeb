@@ -1,0 +1,11 @@
+# Salidas generadas por la auditoría
+informe_auditoria_web.pdf
+screenshot_desktop.png
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
