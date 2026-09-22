@@ -64,11 +64,18 @@ jobs:
               -F "caption=Informe PDF de la auditoria" > /dev/null
           fi
 
+          if [ -f screenshot_inicio.png ]; then
+            curl -fsS -X POST "${API}/sendDocument" \
+              -F "chat_id=${TELEGRAM_CHAT_ID}" \
+              -F "document=@screenshot_inicio.png" \
+              -F "caption=Primera pantalla (alta resolucion)" > /dev/null
+          fi
+
           if [ -f screenshot_desktop.png ]; then
             curl -fsS -X POST "${API}/sendDocument" \
               -F "chat_id=${TELEGRAM_CHAT_ID}" \
               -F "document=@screenshot_desktop.png" \
-              -F "caption=Captura de pantalla (escritorio)" > /dev/null
+              -F "caption=Captura de pantalla completa (escritorio, 2x)" > /dev/null
           fi
 
       - name: Subir informe y captura
@@ -79,5 +86,6 @@ jobs:
           path: |
             informe_auditoria_web.pdf
             screenshot_desktop.png
+            screenshot_inicio.png
           if-no-files-found: warn
           retention-days: 90

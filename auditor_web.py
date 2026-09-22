@@ -92,7 +92,7 @@ async def auditar_web():
         # Inyectamos User-Agent real y Referer para evitar el bloqueo HTTP 403 en imagenes/CDNs
         context = await browser.new_context(
             viewport={"width": 1440, "height": 900},
-            device_scale_factor=1,
+            device_scale_factor=2,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             extra_http_headers={
                 "Referer": "https://rehametrics.com/",
@@ -127,8 +127,13 @@ async def auditar_web():
 
         await preparar_pagina_y_multimedia(page)
 
-        print("CAPTURA: Generando captura de pantalla (Desktop)...")
-        await page.screenshot(path="screenshot_desktop.png", full_page=True)
+        print("CAPTURA: Generando capturas de pantalla (Desktop)...")
+        # Captura completa en alta resolucion (2x): es la que se envia a Telegram
+        await page.screenshot(path="screenshot_desktop.png", full_page=True, scale="device")
+        # Primera pantalla a tamaño real: en el chat se ve grande y legible
+        await page.screenshot(path="screenshot_inicio.png", full_page=False, scale="device")
+        # Copia 1x para incrustar en el PDF, asi el informe no se encoge de peso
+        await page.screenshot(path="screenshot_informe.png", full_page=True, scale="css")
 
         hrefs = await page.eval_on_selector_all("a", "elements => elements.map(e => e.href)")
         links_unicos = list(set([h for h in hrefs if h and h.startswith("http")]))
@@ -191,7 +196,7 @@ def generar_pdf(status_code, probados, rotos, errores):
     story.append(Paragraph("Auditoria Visual de Interfaz (Vista Escritorio)", sub_style))
     story.append(Spacer(1, 6))
     try:
-        img = Image("screenshot_desktop.png")
+        img = Image("screenshot_informe.png")
         
         ancho_deseado = 450
         factor_escala = ancho_deseado / float(img.drawWidth)
