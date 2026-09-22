@@ -1,8 +1,7 @@
 # Salidas generadas por la auditoría
 informe_auditoria_web.pdf
-screenshot_desktop.png
-screenshot_inicio.png
-screenshot_informe.png
+capturas/
+screenshot_*.png
 resumen.txt
 logs/
 

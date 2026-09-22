@@ -64,28 +64,34 @@ jobs:
               -F "caption=Informe PDF de la auditoria" > /dev/null
           fi
 
-          if [ -f screenshot_inicio.png ]; then
+          # Primera pantalla de la pagina principal, en alta resolucion
+          if [ -f capturas/inicio_primera.png ]; then
             curl -fsS -X POST "${API}/sendDocument" \
               -F "chat_id=${TELEGRAM_CHAT_ID}" \
-              -F "document=@screenshot_inicio.png" \
-              -F "caption=Primera pantalla (alta resolucion)" > /dev/null
+              -F "document=@capturas/inicio_primera.png" \
+              -F "caption=Primera pantalla - Inicio (alta resolucion 2x)" > /dev/null
           fi
 
-          if [ -f screenshot_desktop.png ]; then
+          # Captura completa de cada una de las paginas auditadas
+          for f in capturas/*_completa.png; do
+            [ -e "$f" ] || continue
+            nombre=$(basename "$f" _completa.png)
             curl -fsS -X POST "${API}/sendDocument" \
               -F "chat_id=${TELEGRAM_CHAT_ID}" \
-              -F "document=@screenshot_desktop.png" \
-              -F "caption=Captura de pantalla completa (escritorio, 2x)" > /dev/null
-          fi
+              -F "document=@${f}" \
+              -F "caption=Captura completa - ${nombre}" > /dev/null
+          done
 
-      - name: Subir informe y captura
+      - name: Subir informe, resumen y capturas ligeras
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: informe-auditoria-${{ github.run_number }}
+          # Solo lo ligero: las capturas completas en PNG pesan ~50 MB por ejecucion
+          # y GitHub solo guarda 500 MB de artifacts. Van a Telegram a toda resolucion.
           path: |
             informe_auditoria_web.pdf
-            screenshot_desktop.png
-            screenshot_inicio.png
+            resumen.txt
+            capturas/*_pdf.jpg
           if-no-files-found: warn
           retention-days: 90
