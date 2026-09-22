@@ -16,7 +16,7 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-## Uso
+## Uso local
 
 ```bash
 python auditor_web.py
@@ -27,13 +27,19 @@ Salidas (se regeneran en cada ejecución):
 - `informe_auditoria_web.pdf` — informe ejecutivo.
 - `screenshot_desktop.png` — captura a página completa.
 
-## Ejecución programada
+Ambas están excluidas del repositorio por `.gitignore`.
 
-`ejecutar_auditoria.bat` lanza la auditoría y guarda la traza en `logs/`.
-Está registrada en el Programador de tareas de Windows como **AuditRehametricsWeb**,
-de lunes a viernes a las **9:00 AM**.
+## Automatización con GitHub Actions
 
-```bat
-schtasks /query /tn "AuditRehametricsWeb"
-schtasks /run  /tn "AuditRehametricsWeb"
+El workflow [`.github/workflows/auditoria.yml`](.github/workflows/auditoria.yml)
+ejecuta la auditoría **de lunes a viernes a las 9:00 AM (Europe/Madrid)**.
+
+- El `cron` de GitHub Actions está en UTC: `0 7 * * 1-5` (9:00 AM hora peninsular en
+  verano; en invierno, al no ajustarse por horario de verano, se ejecuta a las 8:00 AM).
+- El PDF y la captura se publican como **artifact** de la ejecución
+  (`informe-auditoria-<número de run>`), disponibles 90 días.
+- También puede lanzarse manualmente: pestaña **Actions → Auditoría web → Run workflow**.
+
+```bash
+gh workflow run auditoria.yml   # lanzada manual desde CLI
 ```
